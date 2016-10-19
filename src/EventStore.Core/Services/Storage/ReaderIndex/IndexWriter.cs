@@ -135,6 +135,9 @@ namespace EventStore.Core.Services.Storage.ReaderIndex
             if (curVersion == EventNumber.DeletedStream)
                 return new CommitCheckResult(CommitDecision.Deleted, streamId, curVersion, -1, -1, false);
 
+            if (curVersion == EventNumber.Invalid)
+                return new CommitCheckResult(CommitDecision.InvalidTransaction, streamId, curVersion, -1, -1, false);
+
             if(expectedVersion == ExpectedVersion.StreamExists) {
                 if(IsSoftDeleted(streamId))
                     return new CommitCheckResult(CommitDecision.Deleted, streamId, curVersion, -1, -1, true);

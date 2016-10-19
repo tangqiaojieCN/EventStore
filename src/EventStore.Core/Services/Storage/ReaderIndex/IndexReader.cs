@@ -379,6 +379,7 @@ namespace EventStore.Core.Services.Storage.ReaderIndex
             // If version is not correct -- nothing is changed in cache.
             // This update is conditioned to not interfere with updating stream cache info by commit procedure
             // (which is the source of truth).
+            if (lastEventNumber == EventNumber.Invalid) return lastEventNumber;
             var res = _backend.UpdateStreamLastEventNumber(cache.Version, streamId, lastEventNumber);
             return res ?? lastEventNumber;
         }
@@ -405,7 +406,7 @@ namespace EventStore.Core.Services.Storage.ReaderIndex
                 if(count > _hashCollisionReadLimit)
                 {
                     Log.Error("A hash collision resulted in not finding the last event number for the stream {0}", streamId);
-                    return ExpectedVersion.NoStream;
+                    return EventNumber.Invalid;
                 }
             }
             return ExpectedVersion.NoStream; // no such event stream
