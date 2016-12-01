@@ -245,7 +245,8 @@ namespace EventStore.Core.Services.Storage
                                                                     record.LogPosition,
                                                                     record.TransactionPosition,
                                                                     firstEventNumber,
-                                                                    lastEventNumber));
+                                                                    lastEventNumber,
+                                                                    true));
                 }
             }
             else if (record.Flags.HasAnyOf(PrepareFlags.TransactionBegin | PrepareFlags.TransactionEnd))
@@ -259,10 +260,10 @@ namespace EventStore.Core.Services.Storage
             CommitPendingTransaction(_transaction, isTfEof);
 
             var firstEventNumber = record.FirstEventNumber;
-            var lastEventNumber = _indexCommitter.Commit(record, isTfEof);
+            var lastEventNumber = _indexCommitter.Commit(record, isTfEof, true);
             if (lastEventNumber == EventNumber.Invalid)
                 lastEventNumber = record.FirstEventNumber - 1;
-            _masterBus.Publish(new StorageMessage.CommitAck(record.CorrelationId, record.LogPosition, record.TransactionPosition, firstEventNumber, lastEventNumber));
+            _masterBus.Publish(new StorageMessage.CommitAck(record.CorrelationId, record.LogPosition, record.TransactionPosition, firstEventNumber, lastEventNumber, true));
         }
 
         private void ProcessSystemRecord(SystemLogRecord record)
@@ -284,7 +285,7 @@ namespace EventStore.Core.Services.Storage
         {
             if (transaction.Count > 0)
             {
-                _indexCommitter.Commit(_transaction, isTfEof);
+                _indexCommitter.Commit(_transaction, isTfEof, true);
                 _transaction.Clear();
             }
         }

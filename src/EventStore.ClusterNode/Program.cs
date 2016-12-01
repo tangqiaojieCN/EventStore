@@ -96,9 +96,9 @@ namespace EventStore.ClusterNode
             {
                 if (opts.ClusterSize == 1)
                 {
-                    Log.Info("DNS discovery is disabled, but no gossip seed endpoints have been specified. Since"
-                            + "the cluster size is set to 1, this may be intentional. Gossip seeds can be specified"
-                            + "using the --gossip-seed command line option.");
+                    Log.Info("DNS discovery is disabled, but no gossip seed endpoints have been specified. Since "
+                            + "the cluster size is set to 1, this may be intentional. Gossip seeds can be specified "
+                            + "using the `GossipSeed` option.");
                 }
             }
 
@@ -251,6 +251,8 @@ namespace EventStore.ClusterNode
                 builder.NoGossipOnPublicInterface();
             if(options.SkipDbVerify)
                 builder.DoNotVerifyDbHashes();
+            if(options.AlwaysKeepScavenged)
+                builder.AlwaysKeepScavenged();
 
             if (options.IntSecureTcpPort > 0 || options.ExtSecureTcpPort > 0)
             {

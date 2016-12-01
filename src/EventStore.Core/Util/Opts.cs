@@ -129,6 +129,9 @@ namespace EventStore.Core.Util
         public const string UnsafeIgnoreHardDeleteDescr = "Disables Hard Deletes (UNSAFE: use to remove hard deletes)";
         public static readonly bool UnsafeIgnoreHardDeleteDefault = false;
 
+        public const string AlwaysKeepScavengedDescr = "Always keeps the newer chunks from a scavenge operation.";
+        public static readonly bool AlwaysKeepScavengedDefault = false;
+
         public const string UnsafeDisableFlushToDiskDescr = "Disable flushing to disk.  (UNSAFE: on power off)";
         public static readonly bool UnsafeDisableFlushToDiskDefault = false;
 
@@ -312,6 +315,8 @@ namespace EventStore.Core.Util
         public const string IndexCacheDepthDescr = "Sets the depth to cache for the mid point cache in index.";
         public static int IndexCacheDepthDefault = 16;
 
+        public const string IndexBitnessVersionDescr = "Sets the bitness version for the indexes to use";
+        public const byte IndexBitnessVersionDefault = EventStore.Core.Index.PTableVersions.Index64Bit;
 		/*
 		 * Authentication Options
 		 */

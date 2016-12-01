@@ -117,6 +117,8 @@ namespace EventStore.Core
         private int _advertiseExternalSecureTcpPortAs;
         private int _advertiseInternalTcpPortAs;
         private int _advertiseExternalTcpPortAs;
+        protected byte _indexBitnessVersion;
+        protected bool _alwaysKeepScavenged;
 
         // ReSharper restore FieldCanBeMadeReadOnly.Local
 
@@ -193,9 +195,11 @@ namespace EventStore.Core
             _enableHistograms = Opts.LogHttpRequestsDefault;
             _index = null;
             _indexCacheDepth = Opts.IndexCacheDepthDefault;
+            _indexBitnessVersion = Opts.IndexBitnessVersionDefault;
             _unsafeIgnoreHardDelete = Opts.UnsafeIgnoreHardDeleteDefault;
             _betterOrdering = Opts.BetterOrderingDefault;
             _unsafeDisableFlushToDisk = Opts.UnsafeDisableFlushToDiskDefault;
+            _alwaysKeepScavenged = Opts.AlwaysKeepScavengedDefault;
         }
 
         protected VNodeBuilder WithSingleNodeSettings()
@@ -1062,6 +1066,27 @@ namespace EventStore.Core
             return this;
         }
 
+        /// <summary>
+        /// The bitness version of the indexes
+        /// </summary>
+        /// <param name="indexBitnessVersion">The version of the bitness <see cref="PTableVersion"/></param>
+        /// <returns>A <see cref="VNodeBuilder"/> with the options set</returns>
+        public VNodeBuilder WithIndexBitnessVersion(byte indexBitnessVersion){
+            _indexBitnessVersion = indexBitnessVersion;
+
+            return this;
+        }
+
+        /// <summary>
+        /// The newer chunks during a scavenge are always kept
+        /// </summary>
+        /// <returns>A <see cref="VNodeBuilder"/> with the options set</returns>
+        public VNodeBuilder AlwaysKeepScavenged(){
+            _alwaysKeepScavenged = true;
+
+            return this;
+        }
+
         private void EnsureHttpPrefixes()
         {
             if (_intHttpPrefixes == null || _intHttpPrefixes.IsEmpty())
@@ -1118,14 +1143,14 @@ namespace EventStore.Core
                 if ((_internalTcp.Address.Equals(IPAddress.Parse("0.0.0.0")) ||
                      _externalTcp.Address.Equals(IPAddress.Parse("0.0.0.0"))) && _addInterfacePrefixes)
                 {
-                    IPAddress nonLoopbackAddress = GetNonLoopbackAddress();
+                    IPAddress nonLoopbackAddress = IPFinder.GetNonLoopbackAddress();
                     IPAddress addressToAdvertise = _clusterNodeCount > 1 ? nonLoopbackAddress : IPAddress.Loopback;
 
-                    if (_internalTcp.Address.Equals(IPAddress.Parse("0.0.0.0")))
+                    if (_internalTcp.Address.Equals(IPAddress.Parse("0.0.0.0")) && _advertiseInternalIPAs == null)
                     {
                         intIpAddressToAdvertise = addressToAdvertise;
                     }
-                    if (_externalTcp.Address.Equals(IPAddress.Parse("0.0.0.0")))
+                    if (_externalTcp.Address.Equals(IPAddress.Parse("0.0.0.0")) && _advertiseExternalIPAs == null)
                     {
                         extIpAddressToAdvertise = addressToAdvertise;
                     }
@@ -1154,26 +1179,7 @@ namespace EventStore.Core
             }
             return _gossipAdvertiseInfo;
         }
-
-
-        private static IPAddress GetNonLoopbackAddress()
-        {
-            foreach (var adapter in NetworkInterface.GetAllNetworkInterfaces())
-            {
-                foreach (UnicastIPAddressInformation address in adapter.GetIPProperties().UnicastAddresses)
-                {
-                    if (address.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                    {
-                        if (!IPAddress.IsLoopback(address.Address))
-                        {
-                            return address.Address;
-                        }
-                    }
-                }
-            }
-            return null;
-        }
-
+        
         protected abstract void SetUpProjectionsIfNeeded();
 
         /// <summary>
@@ -1256,10 +1262,12 @@ namespace EventStore.Core
                     _index,
                     _enableHistograms,
                     _indexCacheDepth,
+                    _indexBitnessVersion,
                     consumerStrategies,
                     _unsafeIgnoreHardDelete,
                     _betterOrdering,
-                    _readerThreadsCount);
+                    _readerThreadsCount,
+                    _alwaysKeepScavenged);
             var infoController = new InfoController(options, _projectionType);
 
             _log.Info("{0,-25} {1}", "INSTANCE ID:", _vNodeSettings.NodeInfo.InstanceId);
@@ -1285,7 +1293,7 @@ namespace EventStore.Core
                 if ((_gossipSeeds == null || _gossipSeeds.Count == 0) && _clusterNodeCount > 1)
                 {
                     throw new Exception("DNS discovery is disabled, but no gossip seed endpoints have been specified. "
-                            + "Specify gossip seeds");
+                                      + "Specify gossip seeds using the `GossipSeed` option.");
                 }
 
                 if (_gossipSeeds == null)

@@ -63,11 +63,13 @@ namespace EventStore.Core.Cluster.Settings
         public readonly int MaxMemtableEntryCount;
         public readonly int HashCollisionReadLimit;
         public readonly int IndexCacheDepth;
+        public readonly byte IndexBitnessVersion;
 
         public readonly bool BetterOrdering;
         public readonly string Index;
         public readonly int ReaderThreadsCount;
         public readonly IPersistentSubscriptionConsumerStrategyFactory[] AdditionalConsumerStrategies;
+        public readonly bool AlwaysKeepScavenged;
 
         public ClusterVNodeSettings(Guid instanceId, int debugIndex,
                                     IPEndPoint internalTcpEndPoint,
@@ -118,10 +120,12 @@ namespace EventStore.Core.Cluster.Settings
                                     bool logHttpRequests,
                                     string index = null, bool enableHistograms = false,
                                     int indexCacheDepth = 16,
+                                    byte indexBitnessVersion = 2,
                                     IPersistentSubscriptionConsumerStrategyFactory[] additionalConsumerStrategies = null,
                                     bool unsafeIgnoreHardDeletes = false,
                                     bool betterOrdering = false,
-                                    int readerThreadsCount = 4)
+                                    int readerThreadsCount = 4,
+                                    bool alwaysKeepScavenged = false)
         {
             Ensure.NotEmptyGuid(instanceId, "instanceId");
             Ensure.NotNull(internalTcpEndPoint, "internalTcpEndPoint");
@@ -201,10 +205,12 @@ namespace EventStore.Core.Cluster.Settings
 
             EnableHistograms = enableHistograms;
             IndexCacheDepth = indexCacheDepth;
+            IndexBitnessVersion = indexBitnessVersion;
             Index = index;
             UnsafeIgnoreHardDeletes = unsafeIgnoreHardDeletes;
             BetterOrdering = betterOrdering;
             ReaderThreadsCount = readerThreadsCount;
+            AlwaysKeepScavenged = alwaysKeepScavenged;
         }
 
 
