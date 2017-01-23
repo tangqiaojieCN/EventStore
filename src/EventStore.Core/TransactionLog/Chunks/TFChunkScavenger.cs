@@ -184,15 +184,31 @@ namespace EventStore.Core.TransactionLog.Chunks
                                   prepare =>
                                   {
                                       if (ShouldKeepPrepare(prepare, commits, chunkStartPos, chunkEndPos))
-                                          positionMapping.Add(WriteRecord(newChunk, prepare));
+                                      {
+                                          var lengthOffset = 0;
+                                          var data = prepare.Data;
+                                          if(prepare.Version == LogRecordVersion.LogRecordV0) {
+                                              data = UpgradePrepareData(prepare);
+                                              lengthOffset = 4 + (data.Length - prepare.Data.Length);
+                                          }
+                                          var updatedPrepare = UpgradePrepareVersion(prepare, data);
+                                          positionMapping.Add(WriteRecord(newChunk, updatedPrepare, lengthOffset));
+                                      }
                                   },
                                   commit =>
                                   {
                                       if (ShouldKeepCommit(commit, commits))
-                                          positionMapping.Add(WriteRecord(newChunk, commit));
+                                      {
+                                          var updatedCommit = UpgradeCommitVersion(commit);
+                                          positionMapping.Add(WriteRecord(newChunk, updatedCommit, commit.Version == LogRecordVersion.LogRecordV0 ? 4 : 0));
+                                      }
                                   },
                                   // we always keep system log records for now
-                                  system => positionMapping.Add(WriteRecord(newChunk, system)));
+                                  system => positionMapping.Add(WriteRecord(newChunk, system, 0)));
+                }
+                Console.WriteLine("PosMap");
+                foreach(var pm in positionMapping) {
+                    Console.WriteLine(pm);
                 }
                 newChunk.CompleteScavenge(positionMapping);
 
@@ -497,7 +513,31 @@ namespace EventStore.Core.TransactionLog.Chunks
             }
         }
 
-        private static PosMap WriteRecord(TFChunk.TFChunk newChunk, LogRecord record)
+        private PrepareLogRecord UpgradePrepareVersion(PrepareLogRecord prepare, byte[] data)
+        {
+            return new PrepareLogRecord(prepare.LogPosition, prepare.CorrelationId, prepare.EventId, prepare.TransactionPosition, 
+                                        prepare.TransactionOffset, prepare.EventStreamId, prepare.ExpectedVersion, prepare.TimeStamp, prepare.Flags, prepare.EventType,
+                                        data, prepare.Metadata);
+        }
+
+        private byte[] UpgradePrepareData(PrepareLogRecord prepare) 
+        {
+            if(!SystemStreams.IsMetastream(prepare.EventStreamId))
+                return prepare.Data;
+
+            var metadata = _readIndex.GetStreamMetadata(SystemStreams.OriginalStreamOf(prepare.EventStreamId));
+            if(metadata.TruncateBefore != EventNumber.DeletedStream)
+                return prepare.Data;
+
+            return metadata.ToJsonBytes();
+        }
+
+        private CommitLogRecord UpgradeCommitVersion(CommitLogRecord commit)
+        {
+            return new CommitLogRecord(commit.LogPosition, commit.CorrelationId, commit.TransactionPosition, commit.TimeStamp, commit.FirstEventNumber);
+        }
+
+        private static PosMap WriteRecord(TFChunk.TFChunk newChunk, LogRecord record, int lengthOffset)
         {
             var writeResult = newChunk.TryAppend(record);
             if (!writeResult.Success)
@@ -509,7 +549,7 @@ namespace EventStore.Core.TransactionLog.Chunks
             }
             long logPos = newChunk.ChunkHeader.GetLocalLogPosition(record.LogPosition);
             int actualPos = (int) writeResult.OldPosition;
-            return new PosMap(logPos, actualPos);
+            return new PosMap(logPos, actualPos, lengthOffset);
         }
 
         internal class CommitInfo

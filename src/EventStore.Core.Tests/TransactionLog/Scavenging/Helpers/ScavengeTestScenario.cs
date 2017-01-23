@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using EventStore.Core.Bus;
 using EventStore.Core.DataStructures;
@@ -17,6 +18,8 @@ using EventStore.Core.TransactionLog.FileNamingStrategy;
 using EventStore.Core.TransactionLog.LogRecords;
 using NUnit.Framework;
 using EventStore.Core.Util;
+
+using System.Text;
 
 namespace EventStore.Core.Tests.TransactionLog.Scavenging.Helpers
 {
@@ -120,6 +123,61 @@ namespace EventStore.Core.Tests.TransactionLog.Scavenging.Helpers
                 for (int j = 0; j < _keptRecords[i].Length; ++j)
                 {
                     Assert.AreEqual(_keptRecords[i][j], chunkRecords[j], "Wrong log record #{0} read from chunk #{1}", j, i);
+                }
+            }
+        }
+
+        protected void CheckRecordsV0()
+        {
+            _checked = true;
+            Assert.AreEqual(_keptRecords.Length, _dbResult.Db.Manager.ChunksCount, "Wrong chunks count.");
+
+            for (int i = 0; i < _keptRecords.Length; ++i)
+            {
+                var chunk = _dbResult.Db.Manager.GetChunk(i);
+
+                var chunkRecords = new List<LogRecord>();
+                RecordReadResult result = chunk.TryReadFirst();
+                while (result.Success)
+                {
+                    Console.WriteLine("{0}\n", result.LogRecord);
+                    chunkRecords.Add(result.LogRecord);
+                    result = chunk.TryReadClosestForward(result.NextPosition);
+                }
+
+                Assert.AreEqual(_keptRecords[i].Length, chunkRecords.Count, "Wrong number of records in chunk #{0}", i);
+                for (int j = 0; j < _keptRecords[i].Length; ++j)
+                {
+                    var keptRecord = _keptRecords[i][j];
+                    var chunkRecord = chunkRecords[j];
+
+                    Assert.AreEqual(keptRecord.RecordType, chunkRecord.RecordType, "Wrong log record #{0} read from chunk #{1}", j, i);
+                    switch(keptRecord.RecordType) {
+                        case LogRecordType.Prepare:
+                            var keptPrepare = (PrepareLogRecord)keptRecord;
+                            var chunkPrepare = (PrepareLogRecord)chunkRecord;
+                            Console.WriteLine("Prepare: {0} - {1}@{2}", chunkPrepare.EventId, chunkPrepare.ExpectedVersion, chunkPrepare.EventStreamId);
+                            Console.WriteLine("Data:\n{0}", Encoding.UTF8.GetString(chunkPrepare.Data));
+                            Assert.AreEqual(keptPrepare.EventId, chunkPrepare.EventId);
+                            break;
+                        case LogRecordType.Commit:
+                            var keptCommit = (CommitLogRecord)keptRecord;
+                            var chunkCommit = (CommitLogRecord)chunkRecord;
+                            Console.WriteLine("Commit: {0} - {1}", chunkCommit.CorrelationId, chunkCommit.FirstEventNumber);
+                            Assert.IsTrue(keptCommit.CorrelationId == chunkCommit.CorrelationId &&
+                                          keptCommit.FirstEventNumber == chunkCommit.FirstEventNumber &&
+                                          keptCommit.TransactionPosition == chunkCommit.TransactionPosition);
+                            break;
+                        case LogRecordType.System:
+                            var keptSystem = (SystemLogRecord)keptRecord;
+                            var chunkSystem = (SystemLogRecord)chunkRecord;
+                            Assert.IsTrue(keptSystem.Data == chunkSystem.Data &&
+                                          keptSystem.SystemRecordType == chunkSystem.SystemRecordType);
+                            break;
+                        default:
+                            Assert.Fail("Unknown record type {0}", keptRecord.RecordType);
+                            break;
+                    }
                 }
             }
         }

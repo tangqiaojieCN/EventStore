@@ -20,7 +20,7 @@ namespace EventStore.Core.TransactionLog.Chunks.TFChunk
 {
     public unsafe partial class TFChunk : IDisposable
     {
-        public const byte CurrentChunkVersion = 2;
+        public const byte CurrentChunkVersion = 3;
         public const int WriteBufferSize = 8192;
         public const int ReadBufferSize = 8192;
 
@@ -636,7 +636,8 @@ namespace EventStore.Core.TransactionLog.Chunks.TFChunk
             // for non-scavenged chunk _physicalDataSize should be the same as _logicalDataSize
             // for scavenged chunk _logicalDataSize should be at least the same as _physicalDataSize
             if ((!ChunkHeader.IsScavenged && _logicalDataSize != _physicalDataSize)
-                || (ChunkHeader.IsScavenged && _logicalDataSize < _physicalDataSize))
+                // || (ChunkHeader.IsScavenged && _logicalDataSize < _physicalDataSize))
+                )
             {
                 throw new Exception(string.Format("Data sizes violation. Chunk: {0}, IsScavenged: {1}, LogicalDataSize: {2}, PhysicalDataSize: {3}.",
                                                   FileName, ChunkHeader.IsScavenged, _logicalDataSize, _physicalDataSize));
@@ -747,12 +748,13 @@ namespace EventStore.Core.TransactionLog.Chunks.TFChunk
                     ResizeMemStream(workItem, mapSize);
                 WriteRawData(workItem, workItem.Buffer);
             }
-
-            var footerNoHash = new ChunkFooter(true, true, _physicalDataSize, LogicalDataSize, mapSize, new byte[ChunkFooter.ChecksumSize]);
+            
+            var isMapLatestVersion = ChunkHeader.Version == 3;
+            var footerNoHash = new ChunkFooter(true, isMapLatestVersion,  _physicalDataSize, LogicalDataSize, mapSize, new byte[ChunkFooter.ChecksumSize]);
             //MD5
             workItem.MD5.TransformFinalBlock(footerNoHash.AsByteArray(), 0, ChunkFooter.Size - ChunkFooter.ChecksumSize);
             //FILE
-            var footerWithHash = new ChunkFooter(true, true, _physicalDataSize, LogicalDataSize, mapSize, workItem.MD5.Hash);
+            var footerWithHash = new ChunkFooter(true, isMapLatestVersion, _physicalDataSize, LogicalDataSize, mapSize, workItem.MD5.Hash);
             workItem.AppendData(footerWithHash.AsByteArray(), 0, ChunkFooter.Size);
 
             Flush(); // trying to prevent bug with resized file, but no data in it

@@ -26,6 +26,16 @@ namespace EventStore.Core.TransactionLog.LogRecords
         public readonly byte Version;
         public readonly long LogPosition;
 
+        public long GetNextLogPosition(long logicalPosition, int length, int lengthOffset)
+        {
+            return logicalPosition + length - lengthOffset + 2*sizeof(int);
+        }
+
+        public long GetPrevLogPosition(long logicalPosition, int length, int lengthOffset)
+        {
+            return logicalPosition - length + lengthOffset - 2*sizeof(int);
+        }
+
         public static LogRecord ReadFrom(BinaryReader reader)
         {
             var recordType = (LogRecordType)reader.ReadByte();

@@ -25,8 +25,8 @@ namespace EventStore.Core.TransactionLog.Chunks
         {
             Ensure.Nonnegative(physicalDataSize, "physicalDataSize");
             Ensure.Nonnegative(logicalDataSize, "logicalDataSize");
-            if (logicalDataSize < physicalDataSize)
-                throw new ArgumentOutOfRangeException("logicalDataSize", string.Format("LogicalDataSize {0} is less than PhysicalDataSize {1}", logicalDataSize, physicalDataSize));
+            // if (logicalDataSize < physicalDataSize)
+            //     throw new ArgumentOutOfRangeException("logicalDataSize", string.Format("LogicalDataSize {0} is less than PhysicalDataSize {1}", logicalDataSize, physicalDataSize));
             Ensure.Nonnegative(mapSize, "mapSize");
             Ensure.NotNull(md5Hash, "md5Hash");
             if (md5Hash.Length != ChecksumSize)
