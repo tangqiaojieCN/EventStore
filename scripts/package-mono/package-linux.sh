@@ -136,19 +136,12 @@ mkbundle -c -o clusternode.c -oo clusternode.a \
 # mkbundle appears to be doing it wrong, though maybe there's something I'm not seeing.
 sed -e '/_config_/ s/unsigned //' -i"" clusternode.c
 
-# Forcibly set MONO_GC_DEBUG=clear-at-gc unless it's set to something else
-# shellcheck disable=SC1004
-# (literal linebreak is desired)
-sed -e 's/mono_mkbundle_init();/setenv("MONO_GC_DEBUG", "clear-at-gc", 0);\
-        mono_mkbundle_init();/' -i"" clusternode.c
-
 # shellcheck disable=SC2046
 cc -o eventstored \
     -Wall $(pkg-config --cflags monosgen-2) \
 	clusternode.c \
     $(pkg-config --libs-only-L monosgen-2) \
-	-Wl,-Bstatic -lmonosgen-2.0 \
-    -Wl,-Bdynamic $(pkg-config --libs-only-l monosgen-2 | sed -e "s/\-lmonosgen-2.0 //") \
+    -Wl,-Bdynamic $(pkg-config --libs-only-l monosgen-2) \
 	clusternode.a
 
 cp -r clusternode-web "$PACKAGEDIRECTORY/"
@@ -202,19 +195,12 @@ mkbundle -c \
 # mkbundle appears to be doing it wrong, though maybe there's something I'm not seeing.
 sed -e '/_config_/ s/unsigned //' -i"" testclient.c
 
-# Forcibly set MONO_GC_DEBUG=clear-at-gc unless it's set to something else
-# shellcheck disable=SC1004
-# (literal linebreak is desired)
-sed -e 's/mono_mkbundle_init();/setenv("MONO_GC_DEBUG", "clear-at-gc", 0);\
-        mono_mkbundle_init();/' -i"" testclient.c
-
 # shellcheck disable=SC2046
 cc -o testclient \
     -Wall $(pkg-config --cflags monosgen-2) \
 	testclient.c \
     $(pkg-config --libs-only-L monosgen-2) \
-	-Wl,-Bstatic -lmonosgen-2.0 \
-    -Wl,-Bdynamic $(pkg-config --libs-only-l monosgen-2 | sed -e "s/\-lmonosgen-2.0 //") \
+    -Wl,-Bdynamic $(pkg-config --libs-only-l monosgen-2) \
 	testclient.a
 
 cp testclient "$PACKAGEDIRECTORY/"
