@@ -82,7 +82,6 @@ namespace EventStore.Core.TransactionLog.Chunks.TFChunk
                     if (!TryReadForwardInternal(workItem, logicalPosition, out length, out record))
                         return RecordReadResult.Failure;
 
-                    // long nextLogicalPos = logicalPosition + length + 2*sizeof(int);
                     long nextLogicalPos = record.GetNextLogPosition(logicalPosition, length, 0);
                     return new RecordReadResult(true, nextLogicalPos, record, length, 0);
                 }
@@ -111,7 +110,6 @@ namespace EventStore.Core.TransactionLog.Chunks.TFChunk
                     if (!TryReadBackwardInternal(workItem, logicalPosition, out length, out record))
                         return RecordReadResult.Failure;
 
-                    // long nextLogicalPos = logicalPosition - length - 2 * sizeof(int);
                     long nextLogicalPos = record.GetPrevLogPosition(logicalPosition, length, 0);
                     return new RecordReadResult(true, nextLogicalPos, record, length, 0);
                 }
@@ -197,11 +195,17 @@ namespace EventStore.Core.TransactionLog.Chunks.TFChunk
 
             private PosMap ReadPosMap(ReaderWorkItem workItem, long index)
             {
-                if (Chunk.ChunkFooter.IsMap12Bytes)
+                if (Chunk.ChunkFooter.MapVersion == PosMapVersion.PosMapV3)
                 {
                     var pos = ChunkHeader.Size + Chunk.ChunkFooter.PhysicalDataSize + index*PosMap.FullSize;
                     workItem.Stream.Seek(pos, SeekOrigin.Begin);
                     return PosMap.FromNewFormat(workItem.Reader);
+                }
+                if(Chunk.ChunkFooter.MapVersion == PosMapVersion.PosMapV2)
+                {
+                    var pos = ChunkHeader.Size + Chunk.ChunkFooter.PhysicalDataSize + index*PosMap.Old12ByteSize;
+                    workItem.Stream.Seek(pos, SeekOrigin.Begin);
+                    return PosMap.From12ByteFormat(workItem.Reader);
                 }
                 else
                 {

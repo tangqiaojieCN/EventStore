@@ -20,13 +20,6 @@ namespace EventStore.Core.Tests.Services.Storage.Scavenge
             _firstChunkRecords = new LogRecord[11];
             _secondChunkRecords = new LogRecord[2];
 
-            // for(var i = 0; i < 11; i++) {
-            //     _firstChunkIds[i] = Guid.NewGuid();
-            // }
-            // for(var i = 0; i < 2; i++) {
-            //     _secondChunkIds[i] = Guid.NewGuid();
-            // }
-
             for(var i = 0; i < 11; i++) { // Chunk 1 with 11 events
                 _firstChunkRecords[i] = WriteSingleEventWithLogVersion0(Guid.NewGuid(), _eventStreamId, WriterCheckpoint.ReadNonFlushed(), i);
             }

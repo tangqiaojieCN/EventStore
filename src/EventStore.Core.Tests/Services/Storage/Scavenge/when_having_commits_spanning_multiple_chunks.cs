@@ -5,6 +5,7 @@ using NUnit.Framework;
 namespace EventStore.Core.Tests.Services.Storage.Scavenge
 {
     [TestFixture]
+    [Category("UnderTest")]
     public class when_having_deleted_stream_spanning_two_chunks: ReadIndexTestScenario
     {
         private long[] _survivors;

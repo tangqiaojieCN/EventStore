@@ -749,12 +749,11 @@ namespace EventStore.Core.TransactionLog.Chunks.TFChunk
                 WriteRawData(workItem, workItem.Buffer);
             }
             
-            var isMapLatestVersion = ChunkHeader.Version == 3;
-            var footerNoHash = new ChunkFooter(true, isMapLatestVersion,  _physicalDataSize, LogicalDataSize, mapSize, new byte[ChunkFooter.ChecksumSize]);
+            var footerNoHash = new ChunkFooter(true, PosMap.CurrentPosMapVersion,  _physicalDataSize, LogicalDataSize, mapSize, new byte[ChunkFooter.ChecksumSize]);
             //MD5
             workItem.MD5.TransformFinalBlock(footerNoHash.AsByteArray(), 0, ChunkFooter.Size - ChunkFooter.ChecksumSize);
             //FILE
-            var footerWithHash = new ChunkFooter(true, isMapLatestVersion, _physicalDataSize, LogicalDataSize, mapSize, workItem.MD5.Hash);
+            var footerWithHash = new ChunkFooter(true, PosMap.CurrentPosMapVersion, _physicalDataSize, LogicalDataSize, mapSize, workItem.MD5.Hash);
             workItem.AppendData(footerWithHash.AsByteArray(), 0, ChunkFooter.Size);
 
             Flush(); // trying to prevent bug with resized file, but no data in it
